@@ -1,10 +1,10 @@
 using GLMakie
 #input format: scattering cross section magnitude (R), emiss cross section ((x,y) point_list)
 function main()
-    granularity = 10
+    granularity = 30
     framerate = 2
     
-    #=
+    
     function convert_to_spherical(point_list)
         spherical_list = []
         for row in 1:size(point_list,1)
@@ -33,7 +33,7 @@ function main()
         end
         return(spherical_list)
     end
-=#
+
 
     function draw_mesh(points, faces)
         scene = mesh(points, faces, shading = false)
@@ -55,7 +55,6 @@ function main()
                 end
             end
         end
-        print(size(point_list))
         face_list = []
         for u in 0:num_points-1
             for v in 0:granularity-1
@@ -92,7 +91,7 @@ function main()
         return (new_point_list, face_list)
     end
 
-#=
+
     function calculate_T(
         face_list::Vector{Any}, #make this better typed
         point_list::Vector{Vector{Float64}}
@@ -124,23 +123,20 @@ function main()
         T = sum(n̂_array)
         return T
     end
-=#
+
 
 
     for i in 1:10
 
-        point_list = [1 1 1; 1 8 1; 3 5 3; 6 2 5]
+        point_list = [0 0; 0 10; 4 10-i/2; 4 i/2]
+        
 
         mesh_point_list, mesh_face_list = make_mesh(granularity, point_list)
-        print(mesh_point_list, mesh_face_list)
         scene = mesh(mesh_point_list, 
         mesh_face_list, 
         color = :blue, 
         figure = (resolution = (1000, 1000),),
         figure_padding = 1)
-        #scene, layout = layoutscene()
-        #ax = layout[1, 1] = Axis3(scene)
-        #limits!(ax, -8, 8, -8, 8, -8, 8)
         display(scene)
         sleep(1/framerate)
         
