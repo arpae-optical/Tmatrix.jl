@@ -1,8 +1,10 @@
 using GLMakie
 #input format: scattering cross section magnitude (R), emiss cross section ((x,y) point_list)
 function main()
-    granularity = 20
+    granularity = 10
     framerate = 2
+    
+    #=
     function convert_to_spherical(point_list)
         spherical_list = []
         for row in 1:size(point_list,1)
@@ -31,7 +33,7 @@ function main()
         end
         return(spherical_list)
     end
-
+=#
 
     function draw_mesh(points, faces)
         scene = mesh(points, faces, shading = false)
@@ -42,10 +44,10 @@ function main()
         new_point_list = []
         for row in 1:num_points
             for arc in 0:granularity-1
-                theta = arc*pi/granularity
+                theta = arc*2*pi/granularity
                 point_x = cos(theta)*point_list[row,1]
-                point_y = point_list[row,2]
-                point_z = sin(theta)*point_list[row,1]
+                point_y = sin(theta)*point_list[row,1]
+                point_z = point_list[row,2]
                 if new_point_list == []
                     new_point_list = [point_x point_y point_z]
                 else
@@ -53,25 +55,34 @@ function main()
                 end
             end
         end
-
+        print(size(point_list))
         face_list = []
-        for v in 0:(num_points-1)
-            for u in 0:(granularity-1)
-                p1 = num_points*v+u+1
-                p2 = mod(num_points*v + mod(u + 1, granularity), num_points*granularity)+1
-                p3 = mod(num_points*(v + 1) + u, num_points*granularity)+1
-                p4 = mod(num_points*(v + 1) + mod(u + 1, granularity), num_points*granularity)+1
+        for v in 4:4
+            for u in 0:num_points-1
+                p1 = granularity*u+v+1
+                p2 = mod(granularity*(u + 1) + v, num_points*granularity)+1
+                p3 = mod(granularity*(u + 1) + mod(v + 1, num_points), num_points*granularity)+1
+                p4 = mod(granularity*u + mod(v + 1, num_points), num_points*granularity)+1
+                #=
+                p1 = num_points*u+v+1
+                p2 = mod(num_points*(u + 1) + v, num_points*granularity)+1
+                p3 = mod(num_points*(u + 1) + mod(v + 1, granularity), num_points*granularity)+1
+                p4 = mod(num_points*u + mod(v + 1, granularity), num_points*granularity)+1
+
+                =#
                 if face_list == []
                     face_list =
                         [
-                            p1 p2 p3 p4
+                            p1 p2 p3;
+                            p1 p3 p4
                         ]
                     
                 else
                     face_list = vcat(
                         face_list,
                         [
-                            p1 p2 p3 p4
+                            p1 p2 p3;
+                            p1 p3 p4
                         ]
                     )
                 end
@@ -81,7 +92,7 @@ function main()
         return (new_point_list, face_list)
     end
 
-
+#=
     function calculate_T(
         face_list::Vector{Any}, #make this better typed
         point_list::Vector{Vector{Float64}}
@@ -113,20 +124,23 @@ function main()
         T = sum(n̂_array)
         return T
     end
+=#
 
 
+    for i in 1:1
 
-    for i in 1:10
+        point_list = [1 1 1; 1 8 1; 3 3 3; 6 2 5]
 
-        point_list = [1 1 1; 1 8 1]
-        for i in 1:2
-            point_list = vcat(point_list,([rand((2:8)) rand((0:8)) rand((2:8))]))
-        end
-        
         mesh_point_list, mesh_face_list = make_mesh(granularity, point_list)
-        scene = mesh(mesh_point_list, mesh_face_list, color = :blue, shading = true)
+        print(mesh_point_list, mesh_face_list)
+        scene = mesh(mesh_point_list, 
+        mesh_face_list, 
+        color = :blue, 
+        figure = (resolution = (1000, 1000),),
+        figure_padding = 1)
         #scene, layout = layoutscene()
         #ax = layout[1, 1] = Axis3(scene)
+        #limits!(ax, -8, 8, -8, 8, -8, 8)
         display(scene)
         sleep(1/framerate)
         
