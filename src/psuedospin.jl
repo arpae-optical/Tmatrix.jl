@@ -57,12 +57,12 @@ function main()
         end
         print(size(point_list))
         face_list = []
-        for v in 4:4
-            for u in 0:num_points-1
+        for u in 0:num_points-1
+            for v in 0:granularity-1
                 p1 = granularity*u+v+1
                 p2 = mod(granularity*(u + 1) + v, num_points*granularity)+1
-                p3 = mod(granularity*(u + 1) + mod(v + 1, num_points), num_points*granularity)+1
-                p4 = mod(granularity*u + mod(v + 1, num_points), num_points*granularity)+1
+                p3 = mod(granularity*(u + 1) + mod(v + 1, granularity), num_points*granularity)+1
+                p4 = mod(granularity*u + mod(v + 1, granularity), num_points*granularity)+1
                 #=
                 p1 = num_points*u+v+1
                 p2 = mod(num_points*(u + 1) + v, num_points*granularity)+1
@@ -127,9 +127,9 @@ function main()
 =#
 
 
-    for i in 1:1
+    for i in 1:10
 
-        point_list = [1 1 1; 1 8 1; 3 3 3; 6 2 5]
+        point_list = [1 1 1; 1 8 1; 3 5 3; 6 2 5]
 
         mesh_point_list, mesh_face_list = make_mesh(granularity, point_list)
         print(mesh_point_list, mesh_face_list)
