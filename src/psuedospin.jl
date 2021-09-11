@@ -1,5 +1,6 @@
 using GLMakie
 using FileIO
+using LinearAlgebra
 #input format: scattering cross section magnitude (R), emiss cross section ((x,y) point_list)
 function main()
     granularity = 30
@@ -104,74 +105,72 @@ function main()
     end
 
     function calculate_T(
-        face_list::Vector{Any}, #make this better typed
-        point_list::Vector{Vector{Float64}}
+        face_list, #make this better typed
+        point_list
     ) 
             
-        spherical_list = convert_to_spherical(point_list) #format is [r, θ, ϕ], use coordinatetransformations.jl to convert
+        spherical_list = convert_to_spherical(point_list) #format is [r θ ϕ], use coordinatetransformations.jl to convert
 
         #TODO: bundle these into a new struct and make that not break
-        r_array, θ_array, ϕ_array = ([element[1] for element in spherical_list], [element[2] for element in spherical_list], [element[3] for element in spherical_list])
+        r_array = [spherical_list[row, 1] for row in 1:size(spherical_list,1)]
+        θ_array = [spherical_list[row, 2] for row in 1:size(spherical_list,1)]
+        ϕ_array = [spherical_list[row, 3] for row in 1:size(spherical_list,1)]
 
         # calculate r and n̂ for the geometry
 
-        n̂_array = point_list #copying so that size is same
+        n̂_array = zeros(size(point_list, 1)) #copying so that size is same
 
-        for element in n̂_array
-            element = [0,0,0]
-        end
+        T = randn(1, size(point_list, 1), 2)
 
-        for face in face_list
-            for (vertex, i) in enumerate(face)
-                n_array[vertex] += vertex × point_list[face[(i+1)%size(face)]] #TODO this should be edges not vertices
+
+        for row in 1:size(face_list,1)
+            face = face_list[row, :]
+            for i in 1:size(face,1)
+                vertex1 = face[i]
+                vertex2 = face[i%size(face,1)+1]
+                vertex3 = face[(i+1)%size(face,1)+1]
+                edge1 = spherical_list[vertex1,:]-spherical_list[vertex2,:]
+                edge2 = spherical_list[vertex1,:]-spherical_list[vertex3,:]
+                n̂_array[i] += norm(cross(edge1, edge2)) #TODO this should be edges not vertices
             end
         end
 
-        for element in n̂_array
-            element = normalize(element) #TODO make sure this works, use normalize!(element) later if at all
+        for (i, element) in enumerate(n̂_array)
+            #element = normalize(element) #TODO make sure this works, use normalize!(element) later if at all
+            T[1, i, 2] = element
+            T[1, i, 1] = i
         end
-
-        T = sum(n̂_array)
+        
         return T
     end
 
 
 
-    function plot_mesh_and_emiss(i)
+    function plot_mesh_and_emiss(i, point_list)
 
-        point_list = [0 0; 0 10; 4 10-i/2; 4 i/2]
 
-        f = Figure(
-        resolution = (1000, 700))
-        ga = f[1, 1] = GridLayout()
-        gb = f[2, 1] = GridLayout()
-        gcd = f[1:2, 2] = GridLayout()
-        gc = gcd[1, 1] = GridLayout()
-        gd = gcd[2, 1] = GridLayout()
-
-        axtop = Axis(ga[1, 1])
-        axmain = Axis(ga[2, 1], xlabel = "before", ylabel = "after")
-        axright = Axis(ga[2, 2])
-
-        labels = ["treatment", "placebo", "control"]
-        data = randn(3, 100, 2) .+ [1, 3, 5]
-
-        for (label, col) in zip(labels, eachslice(data, dims = 1))
-            scatter!(axmain, col, label = label)
-            density!(axtop, col[:, 1])
-            density!(axright, col[:, 2], direction = :y)
-        end
-
-        Axis3(gc[1, 1], title = "Brain activation")
 
 
         mesh_point_list, mesh_face_list = make_mesh(granularity, point_list)
 
+        f = Figure(
+        resolution = (1000, 700))
+        ga = f[1, 1] = GridLayout()
+        gc = f[1, 2] = GridLayout()
+
+        axtop = Axis(ga[1, 1])
+        
+        labels = ["scattering cross section"]
+        data = calculate_T(mesh_face_list, mesh_point_list)
+
+        for (label, col) in zip(labels, eachslice(data, dims = 1))
+            scatter!(axtop, col, label = label)
+        end
 
         save_as_obj(mesh_point_list, mesh_face_list, i)
 
         brain = load(assetpath("C:/Users/r2d2go/dum/Tmatrix.jl/data/mesh_$(i).obj"))
-        Axis3(gc[1, 1], title = "Brain activation")
+        Axis3(gc[1, 1], title = "Mesh")
         m = mesh!(
             brain,
             color = :blue,
@@ -180,8 +179,10 @@ function main()
         display(f)
         
     end
+
     for i in 1:10
-        plot_mesh_and_emiss(i)
+        point_list = [0 0; 0 10; 4 10-i/2; 4 i/2]
+        plot_mesh_and_emiss(i, point_list)
         sleep(1/framerate)
     end
 end
