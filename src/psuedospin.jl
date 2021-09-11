@@ -118,10 +118,9 @@ function main()
 
         # calculate r and n̂ for the geometry
 
-        n̂_array = zeros(size(point_list, 1)) #copying so that size is same
+        n̂_array = zeros(size(point_list)) #copying so that size is same
 
-        T = randn(1, size(point_list, 1), 2)
-
+        
 
         for row in 1:size(face_list,1)
             face = face_list[row, :]
@@ -131,12 +130,15 @@ function main()
                 vertex3 = face[(i+1)%size(face,1)+1]
                 edge1 = spherical_list[vertex1,:]-spherical_list[vertex2,:]
                 edge2 = spherical_list[vertex1,:]-spherical_list[vertex3,:]
-                n̂_array[i] += norm(cross(edge1, edge2)) #TODO this should be edges not vertices
+                n̂_array[i, :] += cross(edge1, edge2)#TODO this should be edges not vertices
             end
         end
 
-        for (i, element) in enumerate(n̂_array)
+        #TODO #URGENT #IMPORTANT: Make this use proper Tmatrix instead of whatever this is
+        T = randn(1, size(point_list, 1), 2)
+        for i in 1:size(point_list,1)
             #element = normalize(element) #TODO make sure this works, use normalize!(element) later if at all
+            element = norm(n̂_array[i, :])
             T[1, i, 2] = element
             T[1, i, 1] = i
         end
@@ -147,9 +149,6 @@ function main()
 
 
     function plot_mesh_and_emiss(i, point_list)
-
-
-
 
         mesh_point_list, mesh_face_list = make_mesh(granularity, point_list)
 
@@ -179,9 +178,9 @@ function main()
         display(f)
         
     end
-
+    list_of_point_lists = [point_list = [0 0; 0 10; 4 10-i/2; 4 i/2] for i in 1:10]
     for i in 1:10
-        point_list = [0 0; 0 10; 4 10-i/2; 4 i/2]
+        point_list = list_of_point_lists[i]
         plot_mesh_and_emiss(i, point_list)
         sleep(1/framerate)
     end
