@@ -130,10 +130,10 @@ function main()
                 vertex3 = face[(i+1)%size(face,1)+1]
                 edge1 = spherical_list[vertex1,:]-spherical_list[vertex2,:]
                 edge2 = spherical_list[vertex1,:]-spherical_list[vertex3,:]
-                n̂_array[i, :] += cross(edge1, edge2)#TODO this should be edges not vertices
+                n̂_array[vertex1, :] += cross(edge1, edge2)#TODO this should be edges not vertices
             end
         end
-
+        print(n̂_array)
         #TODO #URGENT #IMPORTANT: Make this use proper Tmatrix instead of whatever this is
         T = randn(1, size(point_list, 1), 2)
         for i in 1:size(point_list,1)
