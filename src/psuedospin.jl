@@ -1,8 +1,9 @@
 using GLMakie
+using FileIO
 #input format: scattering cross section magnitude (R), emiss cross section ((x,y) point_list)
 function main()
     granularity = 30
-    framerate = 2
+    framerate = 5
     
     
     function convert_to_spherical(point_list)
@@ -91,6 +92,16 @@ function main()
         return (new_point_list, face_list)
     end
 
+    function save_as_obj(point_list, face_list, mesh_index)
+        open("data/mesh_$(mesh_index).obj", "w") do mesh_target
+            for row in 1:size(point_list,1)
+                write(mesh_target, "v $(point_list[row, 1]) $(point_list[row, 2]) $(point_list[row, 3]) \n")
+            end
+            for row in 1:size(face_list,1)
+                write(mesh_target, "f $(face_list[row, 1]) $(face_list[row, 2]) $(face_list[row, 3]) \n")
+            end
+        end
+    end
 
     function calculate_T(
         face_list::Vector{Any}, #make this better typed
@@ -126,20 +137,52 @@ function main()
 
 
 
-    for i in 1:10
+    function plot_mesh_and_emiss(i)
 
         point_list = [0 0; 0 10; 4 10-i/2; 4 i/2]
-        
+
+        f = Figure(
+        resolution = (1000, 700))
+        ga = f[1, 1] = GridLayout()
+        gb = f[2, 1] = GridLayout()
+        gcd = f[1:2, 2] = GridLayout()
+        gc = gcd[1, 1] = GridLayout()
+        gd = gcd[2, 1] = GridLayout()
+
+        axtop = Axis(ga[1, 1])
+        axmain = Axis(ga[2, 1], xlabel = "before", ylabel = "after")
+        axright = Axis(ga[2, 2])
+
+        labels = ["treatment", "placebo", "control"]
+        data = randn(3, 100, 2) .+ [1, 3, 5]
+
+        for (label, col) in zip(labels, eachslice(data, dims = 1))
+            scatter!(axmain, col, label = label)
+            density!(axtop, col[:, 1])
+            density!(axright, col[:, 2], direction = :y)
+        end
+
+        Axis3(gc[1, 1], title = "Brain activation")
+
 
         mesh_point_list, mesh_face_list = make_mesh(granularity, point_list)
-        scene = mesh(mesh_point_list, 
-        mesh_face_list, 
-        color = :blue, 
-        figure = (resolution = (1000, 1000),),
-        figure_padding = 1)
-        display(scene)
-        sleep(1/framerate)
+
+
+        save_as_obj(mesh_point_list, mesh_face_list, i)
+
+        brain = load(assetpath("C:/Users/r2d2go/dum/Tmatrix.jl/data/mesh_$(i).obj"))
+        Axis3(gc[1, 1], title = "Brain activation")
+        m = mesh!(
+            brain,
+            color = :blue,
+        )
+
+        display(f)
         
+    end
+    for i in 1:10
+        plot_mesh_and_emiss(i)
+        sleep(1/framerate)
     end
 end
 
