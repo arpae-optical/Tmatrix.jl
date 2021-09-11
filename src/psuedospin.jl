@@ -133,7 +133,6 @@ function main()
                 n̂_array[vertex1, :] += cross(edge1, edge2)#TODO this should be edges not vertices
             end
         end
-        print(n̂_array)
         #TODO #URGENT #IMPORTANT: Make this use proper Tmatrix instead of whatever this is
         T = randn(1, size(point_list, 1), 2)
         for i in 1:size(point_list,1)
