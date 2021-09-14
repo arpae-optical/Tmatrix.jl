@@ -1,12 +1,12 @@
 using GLMakie
 using FileIO
 using LinearAlgebra
+
+
+include("utils.jl")
+include("tmatrix_complex.jl")
 #input format: scattering cross section magnitude (R), emiss cross section ((x,y) point_list)
 function main()
-    granularity = 30
-    framerate = 5
-    
-    
     function convert_to_spherical(point_list)
         spherical_list = []
         for row in 1:size(point_list,1)
@@ -34,11 +34,6 @@ function main()
             end
         end
         return(spherical_list)
-    end
-
-
-    function draw_mesh(points, faces)
-        scene = mesh(points, faces, shading = false)
     end
 
     function make_mesh(granularity::Int, point_list)
@@ -104,6 +99,119 @@ function main()
         end
     end
 
+    function calculate_Tmatrix_for_spheroid(
+        rx::R,
+        rz::R,
+        n_max::Int,
+        k1::Complex,
+        k2::Complex;
+        n_θ_points = 10,
+        n_ϕ_points = 20,
+        HDF5_filename = nothing,
+        rotationally_symmetric = false,
+        symmetric_about_plane_perpendicular_z = false,
+        BigFloat_precision = nothing,
+    ) where {R <: Real}
+    
+        # create a grid of θ_ϕ
+        θ_array, ϕ_array = meshgrid_θ_ϕ(
+            n_θ_points,
+            n_ϕ_points;
+            min_θ = 1e-16,
+            min_ϕ = 1e-16,
+            rotationally_symmetric = rotationally_symmetric,
+        )
+    
+        # calculate r and n̂ for the geometry
+        r_array, n̂_array = ellipsoid(rx, rz, θ_array)
+        
+        println("N ARRAY NOW")
+        println(size(n̂_array))
+        println(n̂_array)
+        println("R ARRAY NOW")
+        println(size(r_array))
+        println(r_array)
+        # calculate T-matrix
+        k1r_array = k1 .* r_array
+        k2r_array = k2 .* r_array
+        T = T_matrix(
+            n_max,
+            k1,
+            k2,
+            k1r_array,
+            k2r_array,
+            r_array,
+            θ_array,
+            ϕ_array,
+            n̂_array;
+            HDF5_filename = HDF5_filename,
+            rotationally_symmetric = rotationally_symmetric,
+            symmetric_about_plane_perpendicular_z = symmetric_about_plane_perpendicular_z,
+            BigFloat_precision = BigFloat_precision,
+        )
+        return T
+    end
+
+    function calculate_Tmatrix_for_any(
+        point_list,
+        face_list, #make this better typed
+        n_max::Int,
+        k1::Complex{R},
+        k2::Complex{R};
+        HDF5_filename = nothing,
+        rotationally_symmetric = false,
+        symmetric_about_plane_perpendicular_z = false,
+        BigFloat_precision = nothing,
+    ) where {R <: Real}
+        
+        spherical_list = convert_to_spherical(point_list) #format is [r, θ, ϕ], use coordinatetransformations.jl to convert
+    
+        #TODO: bundle these into a new struct and make that not break
+        sls = size(spherical_list,1)
+        r_array = reshape([spherical_list[row, 1] for row in 1:sls],(convert(Int,(2*sls)^.5), convert(Int,(2*sls)^.5/2)))
+        θ_array = reshape([spherical_list[row, 2] for row in 1:sls],(convert(Int,(2*sls)^.5), convert(Int,(2*sls)^.5/2)))
+        ϕ_array = reshape([spherical_list[row, 3] for row in 1:sls],(convert(Int,(2*sls)^.5), convert(Int,(2*sls)^.5/2)))
+        
+        # calculate r and n̂ for the geometry
+    
+        n̂_array = reshape([zeros(3) for i in 1:size(point_list, 1)],(convert(Int,(2*sls)^.5), convert(Int,(2*sls)^.5/2)))#copying so that size is same
+
+    
+        for row in 1:size(face_list,1)
+            face = face_list[row, :]
+            for i in 1:size(face,1)
+                vertex1 = face[i]
+                vertex2 = face[i%size(face,1)+1]
+                vertex3 = face[(i+1)%size(face,1)+1]
+                edge1 = spherical_list[vertex1,:]-spherical_list[vertex2,:]
+                edge2 = spherical_list[vertex1,:]-spherical_list[vertex3,:]
+                n̂_array[vertex1] += cross(edge1, edge2)
+            end
+        end
+
+        normalize(n̂_array)
+        # calculate T-matrix
+        k1r_array = k1 .* r_array
+        k2r_array = k2 .* r_array
+        T = T_matrix(
+            n_max,
+            k1,
+            k2,
+            k1r_array,
+            k2r_array,
+            r_array,
+            θ_array,
+            ϕ_array,
+            n̂_array;
+            HDF5_filename = HDF5_filename,
+            rotationally_symmetric = rotationally_symmetric,
+            symmetric_about_plane_perpendicular_z = symmetric_about_plane_perpendicular_z,
+            BigFloat_precision = BigFloat_precision,
+        )
+        return T
+    end
+    
+    #=
     function calculate_T(
         face_list, #make this better typed
         point_list
@@ -130,7 +238,7 @@ function main()
                 vertex3 = face[(i+1)%size(face,1)+1]
                 edge1 = spherical_list[vertex1,:]-spherical_list[vertex2,:]
                 edge2 = spherical_list[vertex1,:]-spherical_list[vertex3,:]
-                n̂_array[vertex1, :] += cross(edge1, edge2)#TODO this should be edges not vertices
+                n̂_array[vertex1, :] += cross(edge1, edge2)
             end
         end
         #TODO #URGENT #IMPORTANT: Make this use proper Tmatrix instead of whatever this is
@@ -144,23 +252,35 @@ function main()
         
         return T
     end
+    =#
 
 
-
-    function plot_mesh_and_emiss(i, point_list)
+    function plot_mesh_and_emiss(i, point_list, granularity)
 
         mesh_point_list, mesh_face_list = make_mesh(granularity, point_list)
+        rx = 3
+        rz = 2
+        n_max = 2
+        k1_r = 1e7
+        k1_i = 0.0
+        k2_r = 1.5e7
+        k2_i = 1e3
+
+        k1 = Complex(k1_r, k1_i)
+        k2 = Complex(k2_r, k2_i)
+        T = calculate_Tmatrix_for_any(mesh_point_list, mesh_face_list, n_max, k1, k2)
+
+        scattering = get_OrentationAv_scattering_CrossSections_from_Tmatrix(T)
+        
+        data = [i, scattering]
 
         f = Figure(
         resolution = (1000, 700))
         ga = f[1, 1] = GridLayout()
         gc = f[1, 2] = GridLayout()
-
         axtop = Axis(ga[1, 1])
-        
         labels = ["scattering cross section"]
-        data = calculate_T(mesh_face_list, mesh_point_list)
-
+        
         for (label, col) in zip(labels, eachslice(data, dims = 1))
             scatter!(axtop, col, label = label)
         end
@@ -177,12 +297,16 @@ function main()
         display(f)
         
     end
-    list_of_point_lists = [point_list = [0 0; 0 10; 4 10-i/2; 4 i/2] for i in 1:10]
+    list_of_point_lists = [[0 0; 0 10; 4 10-i/2; 4 i/2] for i in 1:10]
     for i in 1:10
+        
+        granularity = 32
+        framerate = 5
         point_list = list_of_point_lists[i]
-        plot_mesh_and_emiss(i, point_list)
+        plot_mesh_and_emiss(i, point_list, granularity)
         sleep(1/framerate)
     end
+
 end
 
 main()
