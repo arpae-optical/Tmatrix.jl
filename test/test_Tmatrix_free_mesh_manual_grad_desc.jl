@@ -88,14 +88,12 @@ global ∂loss = 0
 println("Starting optimization for T-matrix ...")
 loss_array = []
 loss_old = 9999999999999
-<<<<<<< HEAD
+
 for n_iteration in 1:50
     global r_array = r_array .- learning_rate .* ∂loss
-=======
 while (n_iteration < 50) # (loss_here < 0)
     n_iteration += 1
     r_array = r_array .- learning_rate .* ∂loss
->>>>>>> parent of 8cc94d8 (.)
 
     loss_here = objective_function(r_array, θ_array)
     ∂loss = ∂objective_function(r_array, θ_array)
@@ -131,11 +129,7 @@ while (n_iteration < 50) # (loss_here < 0)
     mkpath("cache/iteration_particle_plots/maximizing_emissivity")
     savefig(
         fig,
-<<<<<<< HEAD
         "cache/iteration_particle_plots/maximizing_emissivity/particle_geom_iteration_$(n_iteration).png",
-=======
-        "cache/iteration_particle_plots/maximizing_emissivity_07_12_2021__/particle_geom_iteration_$n_iteration.png",
->>>>>>> parent of 8cc94d8 (.)
     )
     # if (loss_here - loss_old) < 1e-6; break; end
     loss_old = loss_here
