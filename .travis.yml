@@ -1,6 +1,6 @@
 language: julia
 julia:
-  - nightly
+  - 1.6
 branches:
   only:
     - main
