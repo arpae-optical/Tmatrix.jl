@@ -1,5 +1,7 @@
 import jax.numpy as np
 
+#dummy comment
+
 def normalize(v):
     norm = np.linalg.norm(v)
     if norm == 0: 
