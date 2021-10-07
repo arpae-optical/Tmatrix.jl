@@ -1,6 +1,6 @@
 using Tmatrix
 using Zygote
-
+using Plots
 function objective_function(r_array_input, θ_array_input)
     # println(r_array)
     # println("I am <<objective_function>>, and the type of r_array is $(typeof(r_array))")
@@ -88,15 +88,11 @@ global ∂loss = 0
 println("Starting optimization for T-matrix ...")
 loss_array = []
 loss_old = 9999999999999
-
 for n_iteration in 1:50
     global r_array = r_array .- learning_rate .* ∂loss
-while (n_iteration < 50) # (loss_here < 0)
-    n_iteration += 1
-    r_array = r_array .- learning_rate .* ∂loss
 
-    loss_here = objective_function(r_array, θ_array)
-    ∂loss = ∂objective_function(r_array, θ_array)
+    global loss_here = objective_function(r_array, θ_array)
+    global ∂loss = ∂objective_function(r_array, θ_array)
     append!(loss_array, loss_here)
 
     println()
@@ -105,12 +101,6 @@ while (n_iteration < 50) # (loss_here < 0)
 
     xyz = vcat(
         Tmatrix.convert_coordinates_Sph2Cart.(r_array, θ_array, zeros(size(r_array)))...,
-    )
-    p1 = plot(
-        xyz_initial[:, 1],
-        xyz_initial[:, 3],
-        aspect_ratio = :equal,
-        label = "initial particle",
     )
     p1 = plot!(
         xyz[:, 1],
@@ -132,6 +122,6 @@ while (n_iteration < 50) # (loss_here < 0)
         "cache/iteration_particle_plots/maximizing_emissivity/particle_geom_iteration_$(n_iteration).png",
     )
     # if (loss_here - loss_old) < 1e-6; break; end
-    loss_old = loss_here
+    global loss_old = loss_here
 end
 
