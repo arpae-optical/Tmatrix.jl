@@ -982,7 +982,7 @@ Accepts .obj
 """
 function T_matrix_SeparateRealImag_arbitrary_mesh_cartesian(
     n_max::Int, k1_r::R, k1_i::R, k2_r::R, k2_i::R,
-    filepath::string,
+    filepath::String,
     rotationally_symmetric::Bool, symmetric_about_plane_perpendicular_z::Bool, BigFloat_precision
 ) where {R <: Real}
     point_mat = obj_to_mesh_mat(filepath)
