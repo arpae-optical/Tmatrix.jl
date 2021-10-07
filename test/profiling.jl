@@ -1,6 +1,6 @@
 # %%
 using Tmatrix
-using ProfileView
+using Profile
 
 
 rx, rz = 1e-7, 1.3e-7
@@ -9,7 +9,8 @@ k1 = Complex(6.2e6)
 k2 = 7e6 + 1e3 * im
 rotationally_symmetric = true
 
-@profiler calculate_Tmatrix_for_spheroid(rx, rz, n_max, k1, k2; rotationally_symmetric=rotationally_symmetric)
+@profile calculate_Tmatrix_for_spheroid(rx, rz, n_max, k1, k2; rotationally_symmetric=rotationally_symmetric)
+Profile.print()
 
 
 """
