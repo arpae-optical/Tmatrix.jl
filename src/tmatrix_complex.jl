@@ -247,7 +247,7 @@ function J_mn_m_n_(
     k2r_array::AbstractVecOrMat{C},
     r_array::AbstractVecOrMat{R},
     θ_array::AbstractVecOrMat{R},
-    ϕ_array::AbstractVecOrMat{R},
+    ϕ_array::AbstractVecOrMat{R},# TODO: use this (rot sym)
     n̂_array::Any; # TODO: I don't know why I get an error when I use n̂_array::AbstractVecOrMat{Vector{Float64}}
     kind = "regular",
     J_superscript = 11,

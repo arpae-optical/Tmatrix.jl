@@ -1,4 +1,4 @@
-#commented psuedocode
+#commented pseudocode
 using Meshes
 using StaticArrays
 using LinearAlgebra

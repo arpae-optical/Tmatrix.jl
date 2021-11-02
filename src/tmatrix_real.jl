@@ -885,7 +885,7 @@ function T_matrix_SeparateRealImag_arbitrary_mesh(
     k2_i::R,
     r_array::AbstractVecOrMat{R},
     θ_array::AbstractVecOrMat{R},
-    ϕ_array::AbstractVecOrMat{R},
+    ϕ_array::AbstractVecOrMat{R}, #TODO: use
     rotationally_symmetric::Bool,
     symmetric_about_plane_perpendicular_z::Bool,
     BigFloat_precision,
