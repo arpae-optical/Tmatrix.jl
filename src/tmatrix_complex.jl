@@ -717,7 +717,7 @@ function T_matrix(
     create_new_arrays = false,
     BigFloat_precision = nothing,
 ) where {R <: Real, C <: Complex{R}}
-    if BigFloat_precision != nothing
+    if BigFloat_precision !== nothing
         return setprecision(BigFloat_precision) do
             return T_matrix(
                 n_max,
@@ -806,7 +806,7 @@ function T_matrix(
             )
         end
 
-        if HDF5_filename != nothing
+        if HDF5_filename !== nothing
             save_Tmatrix_to_HDF5_file(T, HDF5_filename)
         end
 
