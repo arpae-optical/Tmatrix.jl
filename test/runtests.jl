@@ -220,13 +220,12 @@ println("Starting optimization for T-matrix ...")
 for n_iteration in 1:50
     loss_here = objective_function(r_array, θ_array)
     ∂loss_r, ∂loss_θ = ∂objective_function(r_array, θ_array)
-
     global r_array = r_array .- learning_rate .* ∂loss_r
     global θ_array = θ_array .- learning_rate .* ∂loss_θ
     append!(loss_array, loss_here)
 
     println()
-    println("iteration #$n_iteration: loss_here = $loss_here, ∂loss = $∂loss")
+    println("iteration #$n_iteration: loss_here = $loss_here, ∂loss = $∂loss_r, $∂loss_θ")
     println("r_array = $r_array")
 
     xyz = vcat(
