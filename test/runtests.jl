@@ -99,9 +99,10 @@ loss_array = []
 for n_iteration in 1:50
     loss_here = objective_function(r_array, θ_array, target_wavelens, target_emiss)
     ∂loss_r, ∂loss_θ = ∂objective_function(r_array, θ_array, target_wavelens, target_emiss)
-    ∂loss_r = clamp.(∂loss_r, -1e-5, 1e-5)
+    # ∂loss_r = clamp.(∂loss_r, -1e-5, 1e-5)
     # TODO use seq of offsets to avoid negatives
-    ∂loss_θ = clamp.(∂loss_θ, -.5, 0.5)
+    # ∂loss_θ = clamp.(∂loss_θ, -.5, 0.5)
+
     # zero out the first and last control points angle
     ∂loss_θ[1] = 0.0
     ∂loss_θ[length(∂loss_θ)] = 0.0
