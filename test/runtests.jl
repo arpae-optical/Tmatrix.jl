@@ -64,8 +64,7 @@ function rand_target_emiss(n::Integer = 100)
     return (wavelens, emiss)
 end
 
-# TODO compute loss for each wavelen, then take mean and bprop
-# particle size comparable to wavelen
+# Particle size should be comparable to wavelen.
 const input_unit = "m"
 # TODO issue of matrix inverse for n≥4, see emails
 const n_max = 3
