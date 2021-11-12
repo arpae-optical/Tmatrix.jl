@@ -1,142 +1,229 @@
+# using Distributed
+const num_wavelens = 28
+# TODO issue of matrix inverse for n≥4, see emails
+const n_max = 1
+const lr = 1e-9 # 0.5 too small, <<1% change per iter (more like 0.1%). 2 blows up: dloss goes from 18 to 1961 all of a sudden and r goes negative
+const num_ctrl_pts = 20
+
+# if length(workers()) == 1
+# addprocs(num_wavelens)
+# println("Workers: $(length(workers()))")
+# end
+
+# @everywhere
 using Tmatrix
 using Zygote
 using Plots
 using Distributions
 
-function objective_function(r_array_input, θ_array_input, wavelens, target_emiss)
-    r_θ_array = Tmatrix.quadruple_mesh_density(r_array_input, θ_array_input)
-    r_array = r_θ_array[:, 1]
-    θ_array = r_θ_array[:, 2]
-    ϕ_array = zeros(size(θ_array))
-
-    T = [
-        Tmatrix.T_matrix_SeparateRealImag_arbitrary_mesh(
+function objective(r, θ, wavelens, target_emiss)
+    T = map(
+        w -> Tmatrix.T_matrix_SeparateRealImag_arbitrary_mesh(
             n_max,
             w,
             input_unit,
-            Eps_r_r_1,
-            Eps_r_i_1,
-            Mu_r_r_1,
-            Mu_r_i_1,
-            Eps_r_r_2,
-            Eps_r_i_2,
-            Mu_r_r_2,
-            Mu_r_i_2,
-            (collect(r_array)),
-            θ_array,
-            ϕ_array,
+            ε₁.re,
+            ε₁.im,
+            μ₁.re,
+            μ₁.im,
+            ε₂.re,
+            ε₂.im,
+            μ₂.re,
+            μ₂.im,
+            r,
+            θ,
+            zeros(size(θ)),
             rotationally_symmetric,
             symmetric_about_plane_perpendicular_z,
             BigFloat_precision,
-        ) for w in wavelens
-    ]
-    k1_complex = [
-        Tmatrix.get_WaveVector(
-            w;
-            input_unit = input_unit,
-            Eps_r = Complex(Eps_r_r_1, Eps_r_i_1),
-            Mu_r = Complex(Mu_r_r_1, Mu_r_i_1),
-        ) for w in wavelens
-    ]
+        ),
+        # CachingPool(workers()),
+        wavelens,
+    )
 
-    surface_area = Tmatrix.calculate_surface_area_of_axisymmetric_particle(r_array, θ_array)
+    k₁ = map(
+        w -> Tmatrix.get_WaveVector(w; input_unit = input_unit, Eps_r = ε₁, Mu_r = μ₁),
+        # CachingPool(workers()),
+        wavelens,
+    )
 
-    emiss = [
-        Tmatrix.get_OrentationAv_emissivity_from_Tmatrix(t, k1, surface_area) for
-        (t, k1) in zip(T, k1_complex)
-    ]
-    loss = sum(abs.(emiss - target_emiss) .^ 2) / length(emiss)
+    surface_area = Tmatrix.calculate_surface_area_of_axisymmetric_particle(r, θ)
+
+    emiss = map(
+        (t, k₁) ->
+            Tmatrix.get_OrentationAv_emissivity_from_Tmatrix(t, k₁, surface_area),
+        # CachingPool(workers()),
+        T,
+        k₁,
+    )
+    println("pred emiss: $emiss")
+
+    loss = sqrt(sum(abs.(emiss - target_emiss) .^ 2) / length(emiss))
     return loss
 end
 
-function ∂objective_function(r_array, θ_array, target_wavelens, target_emiss)
-    return Zygote.gradient(
-        (r_array, θ_array) ->
-            objective_function(r_array, θ_array, target_wavelens, target_emiss),
-        (collect(r_array)),
-        (collect(θ_array)),
-    )
+function dobjective(r, θ, target_wavelens, target_emiss)
+    loss, back = Zygote.pullback(r -> objective(r, θ, target_wavelens, target_emiss), r)
+    grad = back(one(loss))
+    grad = grad[1] #index to unwrap 1-tuple
+    return loss, grad
 end
 
-function rand_target_emiss(n::Integer = 100)
+# TODO replace with perturbation from orig data set
+function rand_target_emiss(n::Integer = num_wavelens)
     wavelens = collect(LinRange(1e-6, 20e-6, n))
-    emiss = rand(Uniform(0.8, 1.0), n)
-    return (wavelens, emiss)
+    emiss = rand(Uniform(0.0, 0.2), n)
+
+    # picked from actual data
+    wavelens = [
+        1.8406e-6,
+        1.8981e-6,
+        1.9592e-6,
+        2.0245e-6,
+        2.0942e-6,
+        2.1689e-6,
+        2.2491e-6,
+        2.3354e-6,
+        2.4287e-6,
+        2.5297e-6,
+        2.6395e-6,
+        2.7593e-6,
+        2.8904e-6,
+        3.0346e-6,
+        3.1940e-6,
+        3.3710e-6,
+        3.5689e-6,
+        3.7913e-6,
+        4.0434e-6,
+        4.3314e-6,
+        4.6635e-6,
+        5.0508e-6,
+        5.5083e-6,
+        6.0569e-6,
+        6.7269e-6,
+        7.5635e-6,
+        8.6377e-6,
+        10.0676e-6,
+    ]
+
+    emiss = [
+        0.0032,
+        0.0067,
+        0.0081,
+        0.0088,
+        0.0090,
+        0.0091,
+        0.0092,
+        0.0092,
+        0.0092,
+        0.0092,
+        0.0092,
+        0.0092,
+        0.0092,
+        0.0093,
+        0.0093,
+        0.0093,
+        0.0093,
+        0.0094,
+        0.0094,
+        0.0095,
+        0.0095,
+        0.0096,
+        0.0097,
+        0.0099,
+        0.0100,
+        0.0102,
+        0.0104,
+        0.0108,
+    ]
+
+    return (wavelens[1:num_wavelens], emiss[1:num_wavelens])
 end
 
 # Particle size should be comparable to wavelen.
 const input_unit = "m"
-# TODO issue of matrix inverse for n≥4, see emails
-const n_max = 3
-const Eps_r_r_1 = 1.0
-const Eps_r_i_1 = 0.0
-const Eps_r_r_2 = 1.5
-const Eps_r_i_2 = 0.01
-const Mu_r_r_1 = 1.0
-const Mu_r_i_1 = 0.0
-const Mu_r_r_2 = 1.0
-const Mu_r_i_2 = 0.0
+# electric permittivity
+# vacuum
+const ε₁ = 1.0 + 0.0im
+
+# TODO value for gold?
+# const ε₂ = 1.5 + 0.01im
+const ε₂ = .467 + 2.415im
+# TODO should depend on wavelen
+# const ε₂ = -0.882 + 0.0076im
+
+# magnetic permeability
+const μ₁ = 1.0 + 0.0im
+const μ₂ = 1.0 + 0.0im
+
 const rotationally_symmetric = true
 const symmetric_about_plane_perpendicular_z = false
 const BigFloat_precision = nothing
+
 # Set small to avoid radii growing too big, past wavelength, and T matrix
 # blowing up in Bessel function calculation.
-const learning_rate = 0.5e-5
-const num_pts = 20
-const num_ctrl_pts = 20
-const target_wavelens, target_emiss = rand_target_emiss(num_pts)
+# TODO replace
+const target_wavelens, target_emiss = rand_target_emiss(num_wavelens)
 
-θ_array = collect(LinRange(1e-6, pi - 1e-6, num_ctrl_pts))
-angular_jitter = [0.0, rand(Uniform(-1e-5, 1e-5), num_ctrl_pts - 2)..., 0.0]
-θ_array += angular_jitter
+const rx, rz = (4.4e-6, 4.6e-6)
 
 # 1e-5 is to pick a reasonable starting size
-r_array = rand(Normal(1e-5, 1e-5 / 2), size(θ_array))
+# TODO will be replaced by network
+# r = rand(Uniform(1e-6, 100e-6), size(θ))
 
-loss_array = []
+function main()
+    θ = collect(LinRange(1e-6, pi - 1e-6, num_ctrl_pts))
+    # jitter to break gradient symmetry
+    θ += [
+        0.0,
+        rand(
+            Uniform(-pi / (2 * num_ctrl_pts), pi / (2 * num_ctrl_pts)),
+            num_ctrl_pts - 2,
+        )...,
+        0.0,
+    ]
+    r, _ = Tmatrix.ellipsoid(rx, rz, θ)
+    losses = []
+    for n_iteration in 1:5000
+        # TODO use zygote.pullback
+        loss, dloss_r = dobjective(r, θ, target_wavelens, target_emiss)
 
-for n_iteration in 1:50
-    loss_here = objective_function(r_array, θ_array, target_wavelens, target_emiss)
-    ∂loss_r, ∂loss_θ = ∂objective_function(r_array, θ_array, target_wavelens, target_emiss)
-    # ∂loss_r = clamp.(∂loss_r, -1e-5, 1e-5)
-    # TODO use seq of offsets to avoid negatives
-    # ∂loss_θ = clamp.(∂loss_θ, -.5, 0.5)
+        # if any(abs(i) > 1 for i in dloss_r)
+        # global lr /= 10
+        # end
 
-    # zero out the first and last control points angle
-    ∂loss_θ[1] = 0.0
-    ∂loss_θ[length(∂loss_θ)] = 0.0
-    global r_array = r_array .- learning_rate .* ∂loss_r
-    global θ_array = θ_array .- learning_rate .* ∂loss_θ
-    append!(loss_array, loss_here)
+        # dloss_r = [clamp.(i, -1, 1) for i in dloss_r]
 
-    println()
-    println("iteration = $n_iteration")
-    println("loss_here = $loss_here")
-    println("∂loss_r = $∂loss_r")
-    println("∂loss_θ = $∂loss_θ")
-    println("r = $r_array")
-    println("θ = $θ_array")
+        r = r .- lr .* dloss_r
+        append!(losses, loss)
 
-    xyz = vcat(
-        Tmatrix.convert_coordinates_Sph2Cart.(r_array, θ_array, zeros(size(r_array)))...,
-    )
-    p1 = plot!(
-        xyz[:, 1],
-        xyz[:, 3],
-        aspect_ratio = :equal,
-        label = "particle after $n_iteration iterations",
-        title = "scattering cross section = $loss_here m",
-    )
-    p2 = plot(
-        1:length(loss_array),
-        loss_array,
-        xlabel = "iteration #",
-        ylabel = "scattering cross section (m)",
-    )
-    fig = plot(p1, p2, layout = (1, 2), size = (1200, 800))
-    mkpath("cache/iteration_particle_plots/maximizing_emissivity")
-    # savefig(
-    # fig,
-    # "cache/iteration_particle_plots/maximizing_emissivity/particle_geom_iteration_$(n_iteration).png",
-    # )
+        println("""
+        iteration = $n_iteration
+        loss = $loss
+        dloss_r = $dloss_r
+        r = $r
+
+        """)
+
+        # TODO restore
+        #= mkpath("cache/plus_up")
+        xyz = vcat(Tmatrix.convert_coordinates_Sph2Cart.(r, θ, zeros(size(r)))...)
+        p1 = plot!(
+            xyz[:, 1],
+            xyz[:, 3],
+            aspect_ratio = :equal,
+            label = "particle after $n_iteration iterations",
+            title = "scattering cross section = $loss m",
+        )
+        p2 = plot(
+            1:length(losses),
+            losses,
+            xlabel = "iteration #",
+            ylabel = "scattering cross section (m)",
+        )
+        fig = plot(p1, p2, layout = (1, 2), size = (1200, 800))
+        # TODO fix ASAP
+        savefig(fig, "cache/plus_up/$(n_iteration).png") =#
+    end
 end
+main()
