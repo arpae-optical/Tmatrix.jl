@@ -2,7 +2,7 @@
 # Unlike the complex version, this is compatible with automatic differentiation
 
 # TODO:
-# 1- Find a way to enforce concrrete types at the T_matrix function. So far, I have defined abstract types as inputs for all functions. I am not sure how to convert to a concrete type mathcing my computation requirement (e.g., BigFloats)
+# 1- Find a way to enforce concrete types at the T_matrix function. So far, I have defined abstract types as inputs for all functions. I am not sure how to convert to a concrete type mathcing my computation requirement (e.g., BigFloats)
 # 2- Check why trapz_ELZOUKA is not returning exactly the same result as Trapz.trapz
 # 3- The functions I have wrote separating real and imaginary parts are slower, figure out why
 # 4- I need to get rid of Abstract Types, according to https://docs.julialang.org/en/v1/manual/performance-tips/ . For now, I am not sure how to make my code work with arbitrary float size
@@ -907,7 +907,7 @@ function T_matrix_SeparateRealImag_arbitrary_mesh(
         )
         # println("rotationally symmetric T-matrix calculation for arbitrary mesh is starting ...")
     else
-        println("I need to code it!") #TODO code it
+        println("I need to code it!") # TODO code it
     end
 
     return T_matrix_SeparateRealImag(
