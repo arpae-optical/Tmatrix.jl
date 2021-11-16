@@ -16,7 +16,7 @@ include("utils.jl")
 include("geometry.jl")
 include("electromagnetics.jl")
 
-using Tmatrix
+
 using ComplexOperations
 using LinearAlgebra
 using VectorSphericalWaves
@@ -56,7 +56,10 @@ function J_mn_m_n__integrand_SeparateRealImag(
     kind::String,
     J_superscript::Int,
 ) where {R <: Real}
-
+    println("k1")
+    println(k1_i)
+    println("k2")
+    println(k2_i)
     # TODO: do you think I should have done these multiplication outside, rather than repeating them whenever the function is called? or Julia should eliminate these duplicate calculation?
     kr1_r = k1_r .* r_array
     kr1_i = k1_i .* r_array

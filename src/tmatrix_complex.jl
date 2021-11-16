@@ -8,6 +8,9 @@ export calculate_Tmatrix_for_spheroid
 
 include("utils.jl")
 include("geometry.jl")
+include("vsw.jl")
+include("vsw2.jl")
+
 
 # import
 using VectorSphericalWaves
@@ -17,66 +20,6 @@ using LinearAlgebra
 using Trapz
 using HDF5
 
-"""
-    Calculate M_mn_wave as an array
-
-# This is the same as VectorSphericalHarmonics.M_mn_wave, but accept kr_array, θ_array, ϕ_array
-
-Parameters
-
-kr_array, θ_array, ϕ_array : arrays of arbitrary shape
-
-# return
-
-M_mn_wave_array_ : M_mn_wave with shape same as any of kr_array, θ_array, ϕ_array, with an added dimension to represent the three components
-"""
-function M_mn_wave_array(
-    m::Int,
-    n::Int,
-    kr_array::AbstractVecOrMat{<:Complex{<:Real}},
-    θ_array::AbstractVecOrMat{R},
-    ϕ_array::AbstractVecOrMat{R};
-    kind = "regular",
-) where {R <: Real}
-    # Alok way is faster indeed!
-    # TODO: @Alok, I think if we use boradcast it would be faster. I think avoiding preallocation makes the code cleaner and faster
-    M_mn_wave_array_ = (_ -> zero(SVector{3, Complex})).(kr_array)
-    for idx in eachindex(kr_array)
-        M_mn_wave_array_[idx] =
-            M_mn_wave(m, n, kr_array[idx], θ_array[idx], ϕ_array[idx], kind = kind)
-    end
-    return M_mn_wave_array_
-end
-
-"""
-    Calculate N_mn_wave as an array
-
-# This is the same as VectorSphericalHarmonics.N_mn_wave, but accept kr_array, θ_array, ϕ_array
-
-Parameters
-
-kr_array, θ_array, ϕ_array : arrays of arbitrary shape
-
-# return
-
-N_mn_wave_array_ : N_mn_wave with shape same as any of kr_array, θ_array, ϕ_array, with an added dimension to represent the three components
-"""
-function N_mn_wave_array(
-    m::Int,
-    n::Int,
-    kr_array::AbstractVecOrMat{<:Complex{<:Real}},
-    θ_array::AbstractVecOrMat{R},
-    ϕ_array::AbstractVecOrMat{R};
-    kind = "regular",
-) where {R <: Real}
-    # Alok way
-    N_mn_wave_array_ = (_ -> zero(SVector{3, Complex})).(kr_array)
-    for idx in eachindex(kr_array)
-        N_mn_wave_array_[idx] =
-            N_mn_wave(m, n, kr_array[idx], θ_array[idx], ϕ_array[idx], kind = kind)
-    end
-    return N_mn_wave_array_
-end
 
 #############################################################
 # calculate J and Rg J, from equations 5.184 and 5.190
@@ -183,17 +126,17 @@ function J_mn_m_n__integrand_SVector(
 
     # determining the type of the first the second VSWF
     if J_superscript == 11 # TODO: this if-statement can be done more nicely. We separate J_superscript into two pieces, the number 1 represents M_mn_wave_SVector, while number 2 represents N_mn_wave_SVector
-        first_function = VectorSphericalWaves.M_mn_wave_SVector
-        second_function = VectorSphericalWaves.M_mn_wave_SVector
+        first_function = M_mn_wave_SVector
+        second_function = M_mn_wave_SVector
     elseif J_superscript == 12
-        first_function = VectorSphericalWaves.M_mn_wave_SVector
-        second_function = VectorSphericalWaves.N_mn_wave_SVector
+        first_function = M_mn_wave_SVector
+        second_function = N_mn_wave_SVector
     elseif J_superscript == 21
-        first_function = VectorSphericalWaves.N_mn_wave_SVector
-        second_function = VectorSphericalWaves.M_mn_wave_SVector
+        first_function = N_mn_wave_SVector
+        second_function = M_mn_wave_SVector
     elseif J_superscript == 22
-        first_function = VectorSphericalWaves.N_mn_wave_SVector
-        second_function = VectorSphericalWaves.N_mn_wave_SVector
+        first_function = N_mn_wave_SVector
+        second_function = N_mn_wave_SVector
     else
         throw(DomainError("J_superscript must be any of [11,12,21,22]"))
     end
